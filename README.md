@@ -79,3 +79,7 @@ cloud-copy/
 
 - **v2 (2026-10-23)**：浅色主题（默认）+ 深色切换；2GB 上传（浏览器直传 + 分片）；柜子分享链接；文件下载链接
 - v1 (2026-10-23)：初版（拖拽/文字/取件码/预览/下载/nginx 代理/主页入口）
+
+## 字体
+
+仓库内字体（Archivo / IBM Plex Mono / Space Mono）来自 Google Fonts（@fontsource），SIL OFL 开源许可。
