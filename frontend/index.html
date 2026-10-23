@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#f2f5f8">
+<meta name="description" content="云复制 · 取件码文件柜：拖拽文件或写下文字，六位取件码随时取回。">
+<title>云复制 · 取件码文件柜</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+<script>
+/* 主题预置（防闪烁）：默认浅色，仅当用户选择了深色才用深色 */
+try{var t=localStorage.getItem('cc_theme');if(t==='dark'){document.documentElement.setAttribute('data-theme','dark');var m=document.querySelector('meta[name=theme-color]');if(m)m.setAttribute('content','#0a0e14');}}catch(e){}
+</script>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="topbar">
+    <div class="brand">
+      <svg viewBox="0 0 48 48" aria-hidden="true">
+        <rect x="9" y="9" width="21" height="21" rx="5.5" fill="none" stroke="#0c9e77" stroke-width="3.2"/>
+        <rect x="18" y="18" width="21" height="21" rx="5.5" fill="var(--panel,#fff)" stroke="#b9770e" stroke-width="3.2"/>
+      </svg>
+      <div>
+        <div class="brand-name">云复制</div>
+        <div class="brand-sub">CloudCopy · Pick-up Locker</div>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button class="top-icon" id="themeToggle" title="切换浅色/深色" aria-label="切换主题">🌙</button>
+      <a class="top-link" href="/">← 返回主页</a>
+    </div>
+  </header>
+
+  <div class="grid-top">
+    <!-- 取件码面板 -->
+    <section class="panel">
+      <div class="sec-label" id="codeLabel">我的取件码 · My Code</div>
+      <div class="code-display" id="codeDisplay" aria-live="polite">
+        <div class="cell loading">·</div><div class="cell loading">·</div><div class="cell loading">·</div>
+        <div class="cell loading">·</div><div class="cell loading">·</div><div class="cell loading">·</div>
+      </div>
+      <div class="code-actions">
+        <button class="btn" id="copyCode">复制取件码</button>
+        <button class="btn ghost" id="shareLocker">🔗 分享柜子链接</button>
+        <button class="btn danger-ghost sm" id="regenCode">换个新码</button>
+      </div>
+      <p class="code-hint" id="codeHint">把这个码发给朋友，Ta 打开本页输入后就能查看、下载你存入的文件。柜子链接复制后，朋友打开直达。<br>取件码保存在本机浏览器。</p>
+
+      <div class="switch-zone">
+        <div class="sec-label" style="margin-bottom:2px">查看其他取件码</div>
+        <div class="switch-row">
+          <input id="switchInput" maxlength="6" autocomplete="off" spellcheck="false" placeholder="输入 6 位取件码">
+          <button class="btn ghost" id="switchBtn">查看</button>
+        </div>
+        <div class="recent" id="recentCodes"></div>
+      </div>
+    </section>
+
+    <!-- 上传面板 -->
+    <section class="panel">
+      <div class="sec-label">存入文件 · Drop &amp; Text</div>
+      <div class="dropzone" id="dropZone" role="button" tabindex="0" aria-label="拖拽文件到这里或点击选择">
+        <div class="dz-icon">
+          <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M24 30V10m0 0l-8 8m8-8l8 8"/>
+            <path d="M8 30v4a4 4 0 004 4h24a4 4 0 004-4v-4"/>
+          </svg>
+        </div>
+        <div class="dz-title">拖拽文件到这里</div>
+        <div class="dz-sub">或 <span class="u">点击选择文件</span> · 支持多选 · 单个文件最大 <span id="maxMb">2GB</span></div>
+        <div class="dz-scope" id="dzScope">→ 存入取件码 ····</div>
+        <input type="file" id="fileInput" multiple hidden>
+      </div>
+      <div class="upload-tray" id="uploadTray"></div>
+
+      <div class="text-compose">
+        <div class="compose-head">
+          <span><b>或者，写一段文字</b> — 保留换行与格式，存成文本文件</span>
+          <span class="scope" id="textScope">取件码 ····</span>
+        </div>
+        <input class="name-input" id="textName" maxlength="60" placeholder="文件名（可选，默认自动命名）">
+        <textarea id="textInput" placeholder="在这里输入或粘贴文字…&#10;换行、缩进都会被原样保留。&#10;（Ctrl / ⌘ + Enter 快速存入）"></textarea>
+        <div class="compose-foot">
+          <span class="cnt" id="textCount">0 字</span>
+          <button class="btn" id="saveText" disabled>存入文字</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- 列表 -->
+  <section class="panel list-panel">
+    <div class="list-head">
+      <h2>柜子里的东西</h2>
+      <span class="count" id="fileCount"></span>
+      <span class="spacer"></span>
+      <button class="btn ghost sm" id="shareAll">分享柜子</button>
+      <button class="btn ghost sm" id="refreshBtn">刷新</button>
+    </div>
+    <div class="foreign" id="foreignBanner" hidden>
+      <span><span class="mark">!</span> 正在查看取件码 <b class="mark" id="foreignCode"></b> —— 新上传的文件将存入该编码下</span>
+      <button class="btn amber sm" id="backHome">回到我的柜子</button>
+    </div>
+    <div class="filelist" id="fileList"></div>
+    <div class="empty" id="emptyState"></div>
+  </section>
+
+  <footer class="footer">
+    <span>取件码存在本机浏览器 · 换设备请手动输入取件码取件</span>
+    <span id="cloudStatus"><span class="dot">●</span> 云端连接中…</span>
+  </footer>
+</div>
+
+<!-- 预览弹窗 -->
+<div class="modal" id="previewModal" role="dialog" aria-modal="true" hidden>
+  <div class="modal-backdrop" id="modalBackdrop"></div>
+  <div class="modal-panel">
+    <div class="modal-head">
+      <div class="mtitle">
+        <div class="mname" id="modalName">—</div>
+        <div class="mmeta" id="modalMeta"></div>
+      </div>
+      <button class="modal-close" id="modalClose" aria-label="关闭">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-foot">
+      <button class="btn ghost" id="modalCopyLink">复制下载链接</button>
+      <button class="btn" id="modalDownload">下载文件</button>
+    </div>
+  </div>
+</div>
+
+<!-- 分享弹窗 -->
+<div class="modal" id="shareModal" role="dialog" aria-modal="true" hidden>
+  <div class="modal-backdrop" id="shareBackdrop"></div>
+  <div class="modal-panel" style="width:min(560px,100%)">
+    <div class="modal-head">
+      <div class="mtitle">
+        <div class="mname" id="shareTitle">分享</div>
+        <div class="mmeta" id="shareSub"></div>
+      </div>
+      <button class="modal-close" id="shareClose" aria-label="关闭">✕</button>
+    </div>
+    <div class="modal-body" style="min-height:0">
+      <div class="share-box">
+        <input class="share-input" id="shareInput" readonly>
+        <div class="share-actions">
+          <button class="btn" id="shareCopyBtn">复制链接</button>
+          <button class="btn ghost" id="shareOpenBtn">打开链接</button>
+        </div>
+        <p class="share-tip" id="shareTip"></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+<script src="app.js"></script>
+</body>
+</html>

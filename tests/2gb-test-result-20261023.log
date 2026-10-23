@@ -1,0 +1,15 @@
+=== 2GB test (code FRFOXT) ===
+init OK: 64 parts x 32MB
+  ... 8/64 parts, 14s
+  ... 16/64 parts, 28s
+  ... 24/64 parts, 39s
+  ... 32/64 parts, 50s
+  ... 40/64 parts, 61s
+  ... 48/64 parts, 74s
+  ... 56/64 parts, 86s
+  ... 64/64 parts, 102s
+complete OK: 2147483648B | upload 102s (20.1MB/s) | merge 0.6s
+list OK: 2147483648
+download: 2147483648B in 89s (22.9MB/s) | md5: MATCH ✓
+RESULT: PASS
+cleaned FRFOXT

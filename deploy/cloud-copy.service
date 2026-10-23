@@ -1,0 +1,15 @@
+[Unit]
+Description=cloud-copy backend (Huawei OBS pick-up-code locker)
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/cloud-copy
+Environment=PYTHONPATH=/opt/cloud-copy
+ExecStart=/usr/bin/python3 -m uvicorn backend.main:app --host 127.0.0.1 --port 7012
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
