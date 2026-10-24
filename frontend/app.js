@@ -10,6 +10,27 @@
   const LS_THEME = 'cc_theme';
   const CODE_RE = /^[A-Z]{6}$/;
 
+  /* ---------- 图标（Lucide 内联 SVG；全站禁用 emoji） ---------- */
+  const LI = (inner) => '<svg class="li" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + inner + '</svg>';
+  const ICONS = {
+    sun: LI('<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>'),
+    moon: LI('<path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/>'),
+    arrowRight: LI('<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>'),
+    link: LI('<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>'),
+    check: LI('<path d="M20 6 9 17l-5-5"/>'),
+    circleCheck: LI('<circle cx="12" cy="12" r="10"/><path d="m16 9-5.5 5.5L8 12"/>'),
+    circleX: LI('<circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/>'),
+    fileText: LI('<path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/>'),
+    fileImage: LI('<path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><circle cx="10" cy="12" r="2"/><path d="m20 17-1.296-1.296a2.41 2.41 0 0 0-3.408 0L9 22"/>'),
+    fileAudio: LI('<path d="M4 6.835V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.706.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2h-.343"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M2 19a2 2 0 0 1 4 0v1a2 2 0 0 1-4 0v-4a6 6 0 0 1 12 0v4a2 2 0 0 1-4 0v-1a2 2 0 0 1 4 0"/>'),
+    fileVideo: LI('<path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M15.033 13.44a.647.647 0 0 1 0 1.12l-4.065 2.352a.645.645 0 0 1-.968-.56v-4.704a.645.645 0 0 1 .967-.56z"/>'),
+    bookText: LI('<path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20"/><path d="M8 11h8"/><path d="M8 7h6"/>'),
+    file: LI('<path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/>'),
+    fileQuestion: LI('<path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M12 17h.01"/><path d="M9.1 9a3 3 0 0 1 5.82 1c0 2-3 3-3 3"/>'),
+    inbox: LI('<polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>'),
+    searchX: LI('<path d="m13.5 8.5-5 5"/><path d="m8.5 8.5 5 5"/><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>'),
+  };
+
   const state = {
     myCode: '',
     activeCode: '',
@@ -67,7 +88,7 @@
     const m = document.querySelector('meta[name=theme-color]');
     if (m) m.setAttribute('content', dark ? '#0a0e14' : '#f2f5f8');
     const btn = $('#themeToggle');
-    if (btn) btn.textContent = dark ? '☀️' : '🌙';
+    if (btn) btn.innerHTML = dark ? ICONS.sun : ICONS.moon;
     if (persist) lsSet(LS_THEME, t);
   }
   function toggleTheme() {
@@ -80,7 +101,8 @@
     const box = $('#toasts');
     const el = document.createElement('div');
     el.className = 'toast ' + type;
-    el.textContent = msg;
+    const tic = type === 'ok' ? ICONS.circleCheck : type === 'err' ? ICONS.circleX : '';
+    el.innerHTML = (tic ? '<span class="tic">' + tic + '</span>' : '') + '<span class="tmsg">' + esc(msg) + '</span>';
     box.appendChild(el);
     setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 260); }, 3200);
   }
@@ -121,7 +143,7 @@
     });
     $('#codeLabel').textContent = foreign ? '正在查看的取件码 · Viewing' : '我的取件码 · My Code';
     const scope = code ? code : '······';
-    $('#dzScope').textContent = '→ 存入取件码 ' + scope;
+    $('#dzScope').innerHTML = ICONS.arrowRight + ' 存入取件码 ' + scope;
     $('#textScope').textContent = '取件码 ' + scope;
   }
 
@@ -174,12 +196,12 @@
   }
 
   const KIND_META = {
-    text: { icon: '📄', label: 'TEXT' },
-    image: { icon: '🖼️', label: 'IMG' },
-    audio: { icon: '🎵', label: 'AUD' },
-    video: { icon: '🎬', label: 'VID' },
-    pdf: { icon: '📕', label: 'PDF' },
-    other: { icon: '📦', label: 'FILE' },
+    text: { icon: ICONS.fileText, label: 'TEXT' },
+    image: { icon: ICONS.fileImage, label: 'IMG' },
+    audio: { icon: ICONS.fileAudio, label: 'AUD' },
+    video: { icon: ICONS.fileVideo, label: 'VID' },
+    pdf: { icon: ICONS.bookText, label: 'PDF' },
+    other: { icon: ICONS.file, label: 'FILE' },
   };
 
   function renderList() {
@@ -191,8 +213,8 @@
     if (!n) {
       empty.classList.add('show');
       empty.innerHTML = state.activeCode === state.myCode
-        ? '<span class="big">🗂️</span>柜子还是空的<br>把文件拖进上方区域，或写一段文字存入'
-        : '<span class="big">🕳️</span>这个取件码下还没有文件';
+        ? '<span class="big">' + ICONS.inbox + '</span>柜子还是空的<br>把文件拖进上方区域，或写一段文字存入'
+        : '<span class="big">' + ICONS.searchX + '</span>这个取件码下还没有文件';
       return;
     }
     empty.classList.remove('show');
@@ -279,7 +301,7 @@
       });
       body.appendChild(el);
     } else {
-      body.innerHTML = '<div class="mnote">📦 这类文件暂不支持在线预览<br>点击右下角「下载文件」查看</div>';
+      body.innerHTML = '<div class="mnote">' + ICONS.fileQuestion + ' 这类文件暂不支持在线预览<br>点击右下角「下载文件」查看</div>';
     }
   }
 
@@ -368,7 +390,7 @@
         try { res = JSON.parse(xhr.responseText); } catch (e2) { /* ignore */ }
         if (xhr.status === 200 && res && res.ok) {
           bar.style.width = '100%';
-          stat.textContent = '已存入 ✓';
+          stat.innerHTML = ICONS.check + '已存入';
           el.classList.add('done');
           resolve(res.item);
         } else {
@@ -403,7 +425,7 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code, key: init.key, size: file.size }),
       });
-      bar.style.width = '100%'; stat.textContent = '已存入 ✓'; el.classList.add('done');
+      bar.style.width = '100%'; stat.innerHTML = ICONS.check + '已存入'; el.classList.add('done');
       return done.item;
     }
     // multipart
@@ -432,7 +454,7 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ code, key: init.key, size: file.size, uploadId: init.uploadId, parts }),
     });
-    bar.style.width = '100%'; stat.textContent = '已存入 ✓'; el.classList.add('done');
+    bar.style.width = '100%'; stat.innerHTML = ICONS.check + '已存入'; el.classList.add('done');
     return done.item;
   }
 
@@ -660,7 +682,7 @@
     $('#shareClose').addEventListener('click', closeShare);
     $('#shareBackdrop').addEventListener('click', closeShare);
     $('#shareCopyBtn').addEventListener('click', () => {
-      if (shareContext) copyLink(shareContext, '已复制 ✓');
+      if (shareContext) copyLink(shareContext, '已复制');
     });
     $('#shareOpenBtn').addEventListener('click', () => { if (shareContext) window.open(shareContext, '_blank'); });
 
@@ -679,9 +701,9 @@
       state.limits.maxTextKb = h.max_text_kb || 512;
       const mb = state.limits.maxFileMb;
       $('#maxMb').textContent = mb >= 1024 ? (Math.round(mb / 1024 * 10) / 10) + 'GB' : mb + 'MB';
-      $('#cloudStatus').innerHTML = '<span class="dot">●</span> 云端已连接 · OBS cn-north-9';
+      $('#cloudStatus').innerHTML = '<span class="dot"></span> 云端已连接 · OBS cn-north-9';
     } catch (e) {
-      $('#cloudStatus').innerHTML = '<span class="dot" style="color:var(--red)">●</span> 云端离线';
+      $('#cloudStatus').innerHTML = '<span class="dot off"></span> 云端离线';
     }
     ensureMyCode();
   }

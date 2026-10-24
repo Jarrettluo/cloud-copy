@@ -79,6 +79,7 @@ body::after{
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.6'/%3E%3C/svg%3E");
 }
 a{color:var(--mint);text-decoration:none}
+.li{width:1em;height:1em;display:inline-block;vertical-align:-.14em;flex:none}
 button,input,textarea{font-family:inherit;color:inherit}
 .wrap{position:relative;z-index:1;max-width:1180px;margin:0 auto;padding:22px 22px 60px}
 
@@ -94,6 +95,10 @@ button,input,textarea{font-family:inherit;color:inherit}
 .top-icon{font-family:var(--mono);font-size:14px;line-height:1;color:var(--muted);border:1px solid var(--line);padding:8px 10px;border-radius:9px;cursor:pointer;background:transparent;transition:.2s}
 .top-icon:hover{color:var(--mint);border-color:rgba(12,158,119,.4)}
 :root[data-theme="dark"] .top-icon:hover{border-color:rgba(63,230,168,.4)}
+.top-icon .li{width:16px;height:16px;vertical-align:-3px}
+.top-link .li{width:14px;height:14px;vertical-align:-2.5px;margin-right:2px}
+.btn .li{width:14px;height:14px;vertical-align:-2.5px;margin-right:2px}
+.btn.sm .li{width:12px;height:12px;vertical-align:-2px}
 
 /* ---------- 布局 ---------- */
 .grid-top{display:grid;grid-template-columns:minmax(340px,430px) 1fr;gap:18px;align-items:start}
@@ -173,6 +178,7 @@ button,input,textarea{font-family:inherit;color:inherit}
 .dz-sub{font-size:12.5px;color:var(--faint);margin-top:7px;line-height:1.7}
 .dz-sub .u{border-bottom:1px dashed var(--faint)}
 .dz-scope{font-family:var(--mono);font-size:10.5px;color:var(--mint);letter-spacing:.1em;margin-top:12px;opacity:.9}
+.dz-scope .li{width:11px;height:11px;vertical-align:-1px;margin-right:2px}
 body.dragging .dropzone{border-color:var(--mint);background:var(--mint-dim);transform:scale(1.008)}
 
 .upload-tray{margin-top:12px;display:flex;flex-direction:column;gap:8px}
@@ -187,6 +193,8 @@ body.dragging .dropzone{border-color:var(--mint);background:var(--mint-dim);tran
 .tray-item.err{border-color:var(--red-line)}
 .tray-item.err .tname{color:var(--red)}
 .tray-item .tstat{font-family:var(--mono);font-size:11px;color:var(--faint);flex:none;min-width:76px;text-align:right}
+.tstat .li{width:12px;height:12px;vertical-align:-1.5px;margin-right:3px}
+.tray-item.done .tstat{color:var(--mint)}
 
 .text-compose{margin-top:18px}
 .compose-head{font-size:13.5px;color:var(--muted);margin-bottom:10px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
@@ -228,8 +236,9 @@ textarea#textInput:focus{border-color:var(--mint)}
 .frow:hover{background:var(--row-hover);border-color:var(--line)}
 .ficon{
   width:42px;height:42px;border-radius:11px;background:var(--panel2);border:1px solid var(--line);
-  display:flex;align-items:center;justify-content:center;font-size:19px;
+  display:flex;align-items:center;justify-content:center;font-size:19px;color:var(--muted);
 }
+.ficon .li{width:21px;height:21px;vertical-align:0}
 .fmain{min-width:0}
 .fname{display:flex;align-items:center;gap:8px;min-width:0}
 .fname .nm{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -242,7 +251,8 @@ textarea#textInput:focus{border-color:var(--mint)}
 .facts{display:flex;gap:8px;flex:none;flex-wrap:wrap}
 .empty{padding:36px 10px;text-align:center;color:var(--faint);font-size:13.5px;line-height:1.9;display:none}
 .empty.show{display:block}
-.empty .big{font-size:30px;display:block;margin-bottom:10px;opacity:.8}
+.empty .big{display:block;margin-bottom:12px;opacity:.9}
+.empty .big .li{width:36px;height:36px;vertical-align:0}
 
 /* ---------- 模态 ---------- */
 .modal{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;padding:18px}
@@ -258,8 +268,9 @@ textarea#textInput:focus{border-color:var(--mint)}
 .modal-head .mtitle{flex:1;min-width:0}
 .modal-head .mname{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .modal-head .mmeta{font-family:var(--mono);font-size:11px;color:var(--faint);margin-top:3px}
-.modal-close{background:transparent;border:1px solid var(--line);color:var(--muted);border-radius:9px;width:34px;height:34px;cursor:pointer;font-size:15px;flex:none}
+.modal-close{background:transparent;border:1px solid var(--line);color:var(--muted);border-radius:9px;width:34px;height:34px;cursor:pointer;font-size:15px;flex:none;display:flex;align-items:center;justify-content:center}
 .modal-close:hover{color:var(--ink);border-color:var(--line2h)}
+.modal-close .li{width:15px;height:15px}
 .modal-body{overflow:auto;padding:16px;flex:1;min-height:180px;display:flex;flex-direction:column}
 .modal-body pre{
   font-family:var(--mono);font-size:12.5px;line-height:1.75;white-space:pre-wrap;word-break:break-word;
@@ -271,6 +282,7 @@ textarea#textInput:focus{border-color:var(--mint)}
 .modal-body iframe{width:100%;height:66vh;border:1px solid var(--line);border-radius:11px;background:#fff}
 .modal-foot{display:flex;justify-content:flex-end;gap:10px;padding:12px 16px;border-top:1px solid var(--line)}
 .mnote{color:var(--faint);font-size:13px;text-align:center;padding:30px 10px;line-height:1.9}
+.mnote .li{width:18px;height:18px;vertical-align:-4px;margin-right:3px}
 .mloading{color:var(--faint);font-family:var(--mono);font-size:12px;text-align:center;padding:36px 10px}
 
 /* ---------- toast ---------- */
@@ -279,11 +291,14 @@ textarea#textInput:focus{border-color:var(--mint)}
   font-size:13px;background:var(--toast-bg);border:1px solid var(--line2);color:var(--ink);
   padding:10px 16px;border-radius:11px;box-shadow:var(--toast-sh);
   animation:tin .25s ease both;max-width:86vw;
+  display:flex;align-items:center;gap:8px;
 }
 .toast.ok{border-color:rgba(12,158,119,.45)}
-.toast.ok::before{content:"✓ ";color:var(--mint);font-weight:700}
 .toast.err{border-color:var(--red-line)}
-.toast.err::before{content:"✕ ";color:var(--red);font-weight:700}
+.toast .tic{width:15px;height:15px;flex:none;display:flex}
+.toast .tic .li{width:15px;height:15px;vertical-align:0}
+.toast.ok .tic{color:var(--mint)}
+.toast.err .tic{color:var(--red)}
 @keyframes tin{0%{transform:translateY(12px);opacity:0}100%{transform:translateY(0);opacity:1}}
 .toast.out{animation:tout .25s ease both}
 @keyframes tout{100%{transform:translateY(10px);opacity:0}}
@@ -300,7 +315,8 @@ textarea#textInput:focus{border-color:var(--mint)}
 
 /* ---------- footer ---------- */
 .footer{margin-top:26px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:11.5px;color:var(--faint)}
-.footer .dot{color:var(--mint)}
+.footer .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--mint);margin-right:5px;vertical-align:1px}
+.footer .dot.off{background:var(--red)}
 
 /* ---------- mobile ---------- */
 @media(max-width:640px){

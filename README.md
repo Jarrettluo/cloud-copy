@@ -7,7 +7,7 @@
 
 ## 特性（v2，2026-10-23）
 
-- **浅色主题默认**，右上角 🌙/☀️ 一键切深色（记忆在本机，刷新保持）
+- **浅色主题默认**，右上角太阳/月亮图标一键切深色（记忆在本机，刷新保持）
 - **单文件最大 2GB**：≤64MB 走服务器中转；>64MB 浏览器**直传 OBS**（32MB 分片，不占服务器带宽）
 - **柜子分享链接** `?code=XXXXXX`：复制给朋友，打开直达该柜子
 - **文件下载链接** `/api/d/{fid}`：单文件永久链接，打开即下载
@@ -80,6 +80,7 @@ cloud-copy/
 - **v2 (2026-10-23)**：浅色主题（默认）+ 深色切换；2GB 上传（浏览器直传 + 分片）；柜子分享链接；文件下载链接
 - v1 (2026-10-23)：初版（拖拽/文字/取件码/预览/下载/nginx 代理/主页入口）
 
-## 字体
+## 字体与图标
 
-仓库内字体（Archivo / IBM Plex Mono / Space Mono）来自 Google Fonts（@fontsource），SIL OFL 开源许可。
+- 字体：仓库内字体（Archivo / IBM Plex Mono / Space Mono）来自 Google Fonts（@fontsource），SIL OFL 开源许可。
+- 图标：[Lucide](https://lucide.dev)（ISC 许可），全部内联 SVG，无 emoji。
