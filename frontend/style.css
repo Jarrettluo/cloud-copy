@@ -26,8 +26,6 @@
   --cell-bg1:#ffffff; --cell-bg2:#edf2f7; --cell-drop:rgba(15,23,42,.18);
   --cell-ink:#0c9e77; --cell-border:rgba(12,158,119,.3); --cell-glow:rgba(12,158,119,.22); --cell-line:rgba(18,28,45,.07);
   --fcell-ink:#b9770e; --fcell-border:rgba(185,119,14,.34); --fcell-glow:rgba(185,119,14,.22);
-  --sheen:rgba(255,255,255,0); --panel-sh:0 18px 44px -32px rgba(15,23,42,.25); --panel-inset:inset 0 0 0 rgba(0,0,0,0);
-  --btn-sh:0 10px 26px -14px rgba(12,158,119,.45);
   --modal-sh:0 40px 90px -40px rgba(15,23,42,.35);
   --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
   --display:'Space Mono',var(--mono);
@@ -51,8 +49,6 @@
   --cell-bg1:#161d28; --cell-bg2:#0d1219; --cell-drop:rgba(0,0,0,.8);
   --cell-ink:#3fe6a8; --cell-border:rgba(63,230,168,.22); --cell-glow:rgba(63,230,168,.5); --cell-line:rgba(255,255,255,.07);
   --fcell-ink:#ffb454; --fcell-border:rgba(255,180,84,.28); --fcell-glow:rgba(255,180,84,.5);
-  --sheen:rgba(255,255,255,.018); --panel-sh:0 18px 44px -30px rgba(0,0,0,.9); --panel-inset:inset 0 1px 0 rgba(255,255,255,.03);
-  --btn-sh:0 10px 26px -14px rgba(63,230,168,.55);
   --modal-sh:0 40px 90px -40px rgba(0,0,0,1);
 }
 
@@ -103,9 +99,8 @@ button,input,textarea{font-family:inherit;color:inherit}
 /* ---------- 布局 ---------- */
 .grid-top{display:grid;grid-template-columns:minmax(340px,430px) 1fr;gap:18px;align-items:start}
 .panel{
-  background:linear-gradient(180deg,var(--sheen),rgba(255,255,255,0)),var(--panel);
+  background:var(--panel);
   border:1px solid var(--line);border-radius:var(--r);padding:22px;
-  box-shadow:var(--panel-sh), var(--panel-inset);
 }
 .panel + .panel{margin-top:18px}
 @media(max-width:920px){.grid-top{grid-template-columns:1fr;gap:14px}.grid-top .panel + .panel{margin-top:0}}
@@ -133,8 +128,7 @@ button,input,textarea{font-family:inherit;color:inherit}
 .btn{
   font-family:var(--mono);font-size:12.5px;font-weight:600;letter-spacing:.02em;
   background:var(--mint);color:var(--on-mint);border:none;border-radius:10px;padding:10px 15px;cursor:pointer;
-  transition:transform .12s, box-shadow .2s, background .2s;
-  box-shadow:var(--btn-sh);
+  transition:transform .12s, background .2s;
 }
 .btn:hover{background:var(--mint-h);transform:translateY(-1px)}
 .btn:active{transform:translateY(0)}
@@ -172,7 +166,7 @@ button,input,textarea{font-family:inherit;color:inherit}
   background:linear-gradient(180deg,var(--row-hover),transparent);
 }
 .dropzone:hover{border-color:var(--mint)}
-.dropzone .dz-icon{width:46px;height:46px;margin-bottom:12px;color:var(--mint);opacity:.9}
+.dropzone .dz-icon{width:46px;height:46px;margin:0 auto 12px;color:var(--mint);opacity:.9}
 .dropzone .dz-icon svg{width:100%;height:100%}
 .dz-title{font-weight:600;font-size:16.5px;letter-spacing:.02em}
 .dz-sub{font-size:12.5px;color:var(--faint);margin-top:7px;line-height:1.7}

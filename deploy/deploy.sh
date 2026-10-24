@@ -24,8 +24,12 @@ systemctl restart cloud-copy
 sleep 1
 systemctl is-active cloud-copy
 
-echo "==> 4. 健康检查（直连 7012）"
-curl -sf http://127.0.0.1:7012/api/health && echo || { echo "health FAILED"; exit 1; }
+echo "==> 4. 健康检查（直连 7012，最多重试 10 次）"
+for i in $(seq 1 10); do
+  if curl -sf http://127.0.0.1:7012/api/health >/dev/null; then echo "health OK"; break; fi
+  if [ "$i" = "10" ]; then echo "health FAILED"; exit 1; fi
+  sleep 1
+done
 
 echo "==> 5. nginx 检查 + reload"
 /usr/sbin/nginx -t
