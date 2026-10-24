@@ -103,7 +103,8 @@ button,input,textarea{font-family:inherit;color:inherit}
   border:1px solid var(--line);border-radius:var(--r);padding:22px;
 }
 .panel + .panel{margin-top:18px}
-@media(max-width:920px){.grid-top{grid-template-columns:1fr;gap:14px}.grid-top .panel + .panel{margin-top:0}}
+.grid-top .panel + .panel{margin-top:0}
+@media(max-width:920px){.grid-top{grid-template-columns:1fr;gap:14px}}
 
 /* ---------- 取件码面板 ---------- */
 .sec-label{font-family:var(--mono);font-size:11px;letter-spacing:.18em;color:var(--faint);text-transform:uppercase;margin-bottom:14px}
