@@ -291,12 +291,44 @@
         if (currentPreview !== it) return;
         body.innerHTML = '<div class="mnote">预览失败：' + esc(e.message) + '<br>可尝试下载后查看</div>';
       });
-    } else if (it.kind === 'image' || it.kind === 'pdf' || it.kind === 'audio' || it.kind === 'video') {
+    } else if (it.kind === 'image') {
       body.innerHTML = '';
-      const el = document.createElement(it.kind === 'image' ? 'img' : it.kind === 'pdf' ? 'iframe' : it.kind);
+      const img = document.createElement('img');
+      img.src = fileUrl(it, 'inline');
+      img.alt = it.name;
+      img.addEventListener('error', () => {
+        if (currentPreview !== it) return;
+        body.innerHTML = '<div class="mnote">加载失败，可尝试下载后查看</div>';
+      });
+      body.appendChild(img);
+    } else if (it.kind === 'pdf') {
+      // PDF：优先浏览器原生查看器（iframe），失败时回退到新建标签页打开
+      body.innerHTML = '';
+      const frame = document.createElement('iframe');
+      frame.src = fileUrl(it, 'inline');
+      frame.title = it.name;
+      frame.addEventListener('error', () => {
+        if (currentPreview !== it) return;
+        body.innerHTML = '<div class="mnote">PDF 预览失败，可点击右下角「下载文件」查看</div>';
+      });
+      body.appendChild(frame);
+      // 移动端部分浏览器不支持内嵌 PDF，提供「新窗口打开」入口
+      const openBtn = document.createElement('button');
+      openBtn.className = 'btn ghost sm pdf-open';
+      openBtn.innerHTML = ICONS.arrowRight + ' 新窗口打开';
+      openBtn.addEventListener('click', () => window.open(fileUrl(it, 'inline'), '_blank'));
+      body.appendChild(openBtn);
+    } else if (it.kind === 'audio' || it.kind === 'video') {
+      body.innerHTML = '';
+      const el = document.createElement(it.kind);
       el.src = fileUrl(it, 'inline');
-      if (it.kind === 'audio' || it.kind === 'video') { el.controls = true; if (it.kind === 'audio') el.style.marginTop = '20px'; }
+      el.controls = true;
+      el.setAttribute('playsinline', '');
+      el.setAttribute('webkit-playsinline', '');
+      if (it.kind === 'audio') el.style.marginTop = '20px';
+      el.preload = 'metadata';
       el.addEventListener('error', () => {
+        if (currentPreview !== it) return;
         body.innerHTML = '<div class="mnote">加载失败，可尝试下载后查看</div>';
       });
       body.appendChild(el);
@@ -701,7 +733,10 @@
       state.limits.maxTextKb = h.max_text_kb || 512;
       const mb = state.limits.maxFileMb;
       $('#maxMb').textContent = mb >= 1024 ? (Math.round(mb / 1024 * 10) / 10) + 'GB' : mb + 'MB';
-      $('#cloudStatus').innerHTML = '<span class="dot"></span> 云端已连接 · OBS cn-north-9';
+      // 存储后端名由后端上报（OBS / MinIO 私有部署），避免前端写死
+      let label = h.storage_label || '对象存储';
+      if (!h.storage_label && h.storage === 's3') label = 'MinIO / S3';
+      $('#cloudStatus').innerHTML = '<span class="dot"></span> 云端已连接 · ' + esc(label);
     } catch (e) {
       $('#cloudStatus').innerHTML = '<span class="dot off"></span> 云端离线';
     }

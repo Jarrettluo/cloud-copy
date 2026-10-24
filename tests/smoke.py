@@ -94,9 +94,9 @@ check("超限文字→413", r.status_code == 413)
 
 # 10. 清理本测试的 OBS 对象
 try:
+    import os
     sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
     from dotenv import load_dotenv
-    import os
     load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env"))
     from obs import ObsClient
     c = ObsClient(access_key_id=os.environ["OBS_AK"], secret_access_key=os.environ["OBS_SK"],

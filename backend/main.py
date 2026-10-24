@@ -2,11 +2,14 @@
 # -*- coding: utf-8 -*-
 """
 cloud-copy · 云复制 — 后端
-拖拽文件/写文字 → 华为云 OBS（cloud-copy/<CODE>/ 下）→ 六位取件码取回
+拖拽文件/写文字 → 对象存储（华为云 OBS 默认 / MinIO 等 S3 兼容私有部署）→ 六位取件码取回
 
 架构:
   浏览器 → nginx :80 (/cloud-copy/) → 静态前端 /var/www/cloud-copy
-  浏览器 → nginx :80 (/cloud-copy/api/) → 本服务 127.0.0.1:7012 → 华为云 OBS
+  浏览器 → nginx :80 (/cloud-copy/api/) → 本服务 127.0.0.1:7012 → 对象存储
+  大文件：浏览器 ──签名URL──→ 对象存储直传（不经服务器带宽）
+
+存储后端由 STORAGE_BACKEND 环境变量选择（obs | s3），统一封装见 backend/storage.py。
 """
 import mimetypes
 import os
@@ -25,18 +28,14 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse
 from pydantic import BaseModel
-from obs import CompleteMultipartUploadRequest, CompletePart, ObsClient
 from starlette.concurrency import run_in_threadpool
+
+from backend.storage import ObjectInfo, StorageError, create_store
 
 # ---------------------------------------------------------------- 配置
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
-OBS_ENDPOINT = os.environ["OBS_ENDPOINT"]
-OBS_AK = os.environ["OBS_AK"]
-OBS_SK = os.environ["OBS_SK"]
-OBS_BUCKET = os.environ["OBS_BUCKET"]
-OBS_PREFIX = os.environ.get("OBS_PREFIX", "cloud-copy").strip("/")
 MAX_FILE_MB = int(os.environ.get("MAX_FILE_MB", "2048"))
 MAX_TEXT_KB = int(os.environ.get("MAX_TEXT_KB", "512"))
 SINGLE_PUT_LIMIT_MB = int(os.environ.get("SINGLE_PUT_LIMIT_MB", "64"))
@@ -44,13 +43,14 @@ MULTIPART_PART_MB = int(os.environ.get("MULTIPART_PART_MB", "32"))
 UPLOAD_URL_EXPIRES = int(os.environ.get("UPLOAD_URL_EXPIRES", "21600"))
 CODE_CHARSET = os.environ.get("CODE_CHARSET", "ABCDEFGHJKLMNPQRSTUVWXYZ23456789")
 CODE_LEN = int(os.environ.get("CODE_LEN", "6"))
+OBS_PREFIX = os.environ.get("OBS_PREFIX", "cloud-copy").strip("/")
 
 import logging
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger("cloud-copy")
 
-obs = ObsClient(access_key_id=OBS_AK, secret_access_key=OBS_SK, server=OBS_ENDPOINT)
+store = create_store()
 
 # ---------------------------------------------------------------- 工具
 
@@ -152,16 +152,6 @@ def decode_text(raw: bytes) -> str:
     return raw.decode("utf-8", errors="replace")
 
 
-def parse_lm(s: str) -> datetime:
-    for fmt in ("%Y/%m/%d %H:%M:%S", "%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S.%fZ",
-                "%a, %d %b %Y %H:%M:%S %Z"):
-        try:
-            return datetime.strptime(s, fmt)
-        except (TypeError, ValueError):
-            pass
-    return datetime.now()
-
-
 def item_of(key: str, name: str, size: int, dt: datetime) -> dict:
     return {
         "id": fid_encode(key),
@@ -170,6 +160,14 @@ def item_of(key: str, name: str, size: int, dt: datetime) -> dict:
         "time": dt.strftime("%Y-%m-%d %H:%M:%S"),
         "kind": classify(name),
     }
+
+
+def store_call(fn, *args, **kwargs):
+    """统一把 StorageError 转成 HTTPException（status 默认 502）。"""
+    try:
+        return fn(*args, **kwargs)
+    except StorageError as e:
+        raise HTTPException(e.status, str(e))
 
 
 class RateLimiter:
@@ -197,15 +195,12 @@ def client_ip(request: Request) -> str:
 
 
 # ---------------------------------------------------------------- 应用
-app = FastAPI(title="cloud-copy", version="1.0.0", docs_url=None, redoc_url=None, openapi_url=None)
+app = FastAPI(title="cloud-copy", version="1.1.0", docs_url=None, redoc_url=None, openapi_url=None)
 
 
 @app.on_event("shutdown")
 def _shutdown() -> None:
-    try:
-        obs.close()
-    except Exception:
-        pass
+    store.close()
 
 
 @app.get("/api/health")
@@ -217,6 +212,9 @@ def health() -> dict:
         "ts": int(time.time()),
         "max_file_mb": MAX_FILE_MB,
         "max_text_kb": MAX_TEXT_KB,
+        "storage": store.backend,
+        "storage_label": store.label,
+        "bucket": store.bucket,
     }
 
 
@@ -226,11 +224,12 @@ def new_code(request: Request) -> dict:
         raise HTTPException(429, "太频繁了，稍后再试")
     for _ in range(30):
         code = "".join(secrets.choice(CODE_CHARSET) for _ in range(CODE_LEN))
-        r = obs.listObjects(OBS_BUCKET, prefix=f"{OBS_PREFIX}/{code}/", max_keys=1)
-        if r.status != 200:
-            log.warning("new_code check failed %s %s", r.status, r.errorCode)
+        try:
+            items, _, _ = store_call(store.list, f"{OBS_PREFIX}/{code}/", max_keys=1)
+        except HTTPException:
+            log.warning("new_code check failed")
             return {"ok": True, "code": code}
-        if not (r.body.contents or []):
+        if not items:
             return {"ok": True, "code": code}
     raise HTTPException(503, "生成失败，稍后再试")
 
@@ -269,10 +268,7 @@ def upload_text(request: Request, body: TextUpload) -> dict:
         else:
             name += ".txt"
     key = build_key(code, name)
-    r = obs.putContent(OBS_BUCKET, key, raw, headers={"Content-Type": "text/plain; charset=utf-8"})
-    if r.status != 200:
-        log.error("obs putContent fail %s %s", r.status, r.errorCode)
-        raise HTTPException(502, "存储写入失败，稍后再试")
+    store_call(store.put_bytes, key, raw, "text/plain; charset=utf-8")
     log.info("text saved %s (%dB)", key, len(raw))
     return {"ok": True, "item": item_of(key, name, len(raw), datetime.now())}
 
@@ -302,12 +298,7 @@ async def upload_file(request: Request, code: str = Form(...), file: UploadFile 
         if size == 0:
             raise HTTPException(400, "空文件")
         key = build_key(code, name)
-        r = await run_in_threadpool(
-            partial(obs.putFile, OBS_BUCKET, key, tmp_path, headers={"Content-Type": guess_ctype(name)})
-        )
-        if r.status != 200:
-            log.error("obs putFile fail %s %s", r.status, r.errorCode)
-            raise HTTPException(502, "存储写入失败，稍后再试")
+        await run_in_threadpool(partial(store_call, store.put_file, key, tmp_path, guess_ctype(name)))
     finally:
         try:
             os.unlink(tmp_path)
@@ -317,7 +308,7 @@ async def upload_file(request: Request, code: str = Form(...), file: UploadFile 
     return {"ok": True, "item": item_of(key, name, size, datetime.now())}
 
 
-# ---------------------------------------------------------------- 直传（大文件走浏览器↔OBS）
+# ---------------------------------------------------------------- 直传（大文件走浏览器↔对象存储）
 
 class UploadInit(BaseModel):
     code: str
@@ -340,28 +331,15 @@ def upload_init(request: Request, body: UploadInit) -> dict:
     ctype = guess_ctype(name)
 
     if size <= SINGLE_PUT_LIMIT_MB * 1024 * 1024:
-        u = obs.createSignedUrl("PUT", OBS_BUCKET, key, expires=UPLOAD_URL_EXPIRES,
-                                headers={"Content-Type": ctype})
-        if not getattr(u, "signedUrl", None):
-            log.error("sign put fail %s", getattr(u, "errorCode", None))
-            raise HTTPException(502, "签名失败，稍后再试")
-        return {"ok": True, "mode": "single", "key": key, "url": u.signedUrl, "ctype": ctype}
+        url = store_call(store.sign_put, key, ctype, UPLOAD_URL_EXPIRES)
+        return {"ok": True, "mode": "single", "key": key, "url": url, "ctype": ctype}
 
     part_size = MULTIPART_PART_MB * 1024 * 1024
     count = (size + part_size - 1) // part_size
-    r = obs.initiateMultipartUpload(OBS_BUCKET, key, contentType=ctype)
-    if r.status != 200:
-        log.error("obs init mp fail %s %s", r.status, r.errorCode)
-        raise HTTPException(502, "存储初始化失败，稍后再试")
-    upload_id = r.body.uploadId
+    upload_id = store_call(store.init_multipart, key, ctype)
     parts: List[str] = []
     for i in range(1, count + 1):
-        u = obs.createSignedUrl("PUT", OBS_BUCKET, key, expires=UPLOAD_URL_EXPIRES,
-                                headers={"Content-Type": ctype},
-                                queryParams={"partNumber": str(i), "uploadId": upload_id})
-        if not getattr(u, "signedUrl", None):
-            raise HTTPException(502, "签名失败，稍后再试")
-        parts.append(u.signedUrl)
+        parts.append(store_call(store.sign_part, key, upload_id, i, ctype, UPLOAD_URL_EXPIRES))
     log.info("mp init %s (%dB, %d parts)", key, size, count)
     return {"ok": True, "mode": "multipart", "key": key, "uploadId": upload_id,
             "partSize": part_size, "count": count, "parts": parts, "ctype": ctype}
@@ -395,24 +373,15 @@ def upload_complete(request: Request, body: UploadComplete) -> dict:
     if body.uploadId:
         if not body.parts:
             raise HTTPException(400, "缺少分片信息")
-        req = CompleteMultipartUploadRequest(
-            parts=[CompletePart(partNum=p.partNum, etag=p.etag) for p in body.parts])
-        r = obs.completeMultipartUpload(OBS_BUCKET, body.key, body.uploadId, req)
-        if r.status != 200:
-            log.error("obs complete mp fail %s %s %s", r.status, r.errorCode, r.errorMessage)
-            raise HTTPException(502, "合并分片失败，请重试")
-    r = obs.listObjects(OBS_BUCKET, prefix=body.key, max_keys=10)
-    obj = None
-    if r.status == 200:
-        for o in (r.body.contents or []):
-            if o.key == body.key:
-                obj = o
-                break
+        store_call(store.complete_multipart, body.key, body.uploadId,
+                   [(p.partNum, p.etag) for p in body.parts])
+    items, _, _ = store_call(store.list, body.key, max_keys=10)
+    obj = next((o for o in items if o.key == body.key), None)
     if obj is None:
         raise HTTPException(404, "文件不存在")
     name = sub.split("__", 1)[-1]
     log.info("upload complete %s (%dB)", body.key, obj.size)
-    return {"ok": True, "item": item_of(obj.key, name, obj.size, parse_lm(obj.lastModified))}
+    return {"ok": True, "item": item_of(obj.key, name, obj.size, obj.last_modified)}
 
 
 class UploadAbort(BaseModel):
@@ -425,10 +394,7 @@ class UploadAbort(BaseModel):
 def upload_abort(request: Request, body: UploadAbort) -> dict:
     code = _code_or_400(body.code)
     _owned_key_or_404(code, body.key)
-    try:
-        obs.abortMultipartUpload(OBS_BUCKET, body.key, body.uploadId)
-    except Exception:
-        pass
+    store_call(store.abort_multipart, body.key, body.uploadId)
     return {"ok": True}
 
 
@@ -438,26 +404,22 @@ def list_code(request: Request, code: str, limit: int = 500) -> dict:
         raise HTTPException(429, "太频繁了，稍后再试")
     code = _code_or_400(code)
     prefix = f"{OBS_PREFIX}/{code}/"
-    items = []
+    items: List[ObjectInfo] = []
     marker = None
     for _ in range(10):
-        r = obs.listObjects(OBS_BUCKET, prefix=prefix, marker=marker, max_keys=500)
-        if r.status != 200:
-            log.error("obs list fail %s %s", r.status, r.errorCode)
-            raise HTTPException(502, "存储读取失败，稍后再试")
-        for o in (r.body.contents or []):
+        page, truncated, marker = store_call(store.list, prefix, marker=marker, max_keys=500)
+        for o in page:
             base = o.key[len(prefix):]
             if not base or base.endswith("/") or base.startswith("."):
                 continue
             name = base.split("__", 1)[1] if "__" in base else base
-            items.append(item_of(o.key, name, o.size, parse_lm(o.lastModified)))
-        if not getattr(r.body, "is_truncated", False):
+            items.append(ObjectInfo(o.key, o.size, o.last_modified))
+        if not truncated or not marker:
             break
-        marker = getattr(r.body, "next_marker", None)
-        if not marker:
-            break
-    items.sort(key=lambda x: x["time"], reverse=True)
-    return {"ok": True, "code": code, "count": len(items), "items": items[:limit]}
+    items.sort(key=lambda x: x.last_modified, reverse=True)
+    out = [item_of(o.key, o.key.rsplit("/", 1)[-1].split("__", 1)[-1], o.size, o.last_modified)
+           for o in items[:limit]]
+    return {"ok": True, "code": code, "count": len(items), "items": out}
 
 
 @app.get("/api/share/{code}/{fid}")
@@ -503,27 +465,14 @@ def download_by_fid(request: Request, fid: str, disposition: str = "attachment")
 
 
 def _serve_object(key: str, disposition: str = "attachment") -> object:
-    """公共伺服逻辑：文本走服务端代理（转码+防 XSS），其余 302 → OBS 签名 URL。"""
+    """公共伺服逻辑：文本走服务端代理（转码+防 XSS），其余 302 → 存储签名 URL。"""
     name = key.rsplit("/", 1)[-1].split("__", 1)[-1]
     kind = classify(name)
     disp = "inline" if disposition == "inline" else "attachment"
     filename_star = "UTF-8''" + quote(name)
 
     if disp == "inline" and kind == "text":
-        g = obs.getObject(OBS_BUCKET, key, loadStreamInMemory=False)
-        if g.status != 200:
-            raise HTTPException(404, "文件不存在")
-        truncated = False
-        try:
-            raw = g.body.response.read(TEXT_PREVIEW_MAX + 1)
-        finally:
-            try:
-                g.body.close()
-            except Exception:
-                pass
-        if len(raw) > TEXT_PREVIEW_MAX:
-            truncated = True
-            raw = raw[:TEXT_PREVIEW_MAX]
+        raw, truncated = store_call(store.head_bytes, key, TEXT_PREVIEW_MAX)
         text = decode_text(raw)
         if truncated:
             text += "\n\n……［内容较长，已截断，下载查看完整内容］"
@@ -537,17 +486,13 @@ def _serve_object(key: str, disposition: str = "attachment") -> object:
             },
         )
 
-    query = {"response-content-disposition": f"{disp}; filename*={filename_star}"}
-    if disp == "inline" and kind in ("image", "audio", "video", "pdf"):
-        query["response-content-type"] = guess_ctype(name)
-    elif disp == "inline":
-        query["response-content-disposition"] = f"attachment; filename*={filename_star}"
-    u = obs.createSignedUrl("GET", OBS_BUCKET, key, expires=900, queryParams=query)
-    signed = getattr(u, "signedUrl", None)
-    if not signed:
-        log.error("sign fail %s %s", getattr(u, "errorCode", None), getattr(u, "errorMessage", None))
-        raise HTTPException(502, "签名失败，稍后再试")
-    return RedirectResponse(signed, status_code=302)
+    # 浏览器内嵌预览的类型：图片/音频/视频/PDF 用签名 URL 直读（不占服务器带宽）
+    inline_ok = kind in ("image", "audio", "video", "pdf")
+    if disp == "inline" and not inline_ok:
+        disp = "attachment"
+    ctype = guess_ctype(name) if inline_ok else None
+    url = store_call(store.sign_get, key, disp, name, ctype, 900)
+    return RedirectResponse(url, status_code=302)
 
 
 # nginx 反代时 X-Forwarded-* 已注入；本地调试直连时也能跑

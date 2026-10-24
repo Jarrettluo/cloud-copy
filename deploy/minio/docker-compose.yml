@@ -1,0 +1,63 @@
+name: cloud-copy
+
+# cloud-copy 私有部署栈：MinIO（对象存储）+ cloud-copy（后端）
+# 用法:
+#   cp .env.minio.example .env.minio
+#   docker compose --env-file .env.minio up -d
+# 详见 README.md
+
+services:
+  minio:
+    image: minio/minio:latest
+    container_name: cloudcopy-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?请在 .env.minio 中设置强密码}
+      # 浏览器直传需要 CORS；桶级 CORS 由后端启动时自动配置，这里再兜底一份
+      MINIO_API_CORS_ALLOW_ORIGIN: ${MINIO_CORS_ORIGIN:-*}
+    ports:
+      - "${MINIO_PORT:-9000}:9000"        # S3 API
+      - "${MINIO_CONSOLE_PORT:-9001}:9001" # 控制台
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  cloud-copy:
+    build:
+      context: ../..
+      dockerfile: deploy/minio/Dockerfile
+    container_name: cloudcopy-backend
+    restart: unless-stopped
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      STORAGE_BACKEND: s3
+      S3_ENDPOINT: http://minio:9000
+      # 签名 URL 对外端点：必须是浏览器能直接访问的地址（如 http://<公网IP>:9000）；
+      # Docker 内网部署（S3_ENDPOINT=http://minio:9000）时务必按实际地址设置。
+      S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:-http://127.0.0.1:9000}
+      S3_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:?请在 .env.minio 中设置强密码}
+      S3_BUCKET: ${S3_BUCKET:-cloud-copy}
+      S3_LABEL: ${S3_LABEL:-MinIO 私有部署}
+      OBS_PREFIX: ${OBS_PREFIX:-cloud-copy}
+      MAX_FILE_MB: ${MAX_FILE_MB:-2048}
+      MAX_TEXT_KB: ${MAX_TEXT_KB:-512}
+      SINGLE_PUT_LIMIT_MB: ${SINGLE_PUT_LIMIT_MB:-64}
+      MULTIPART_PART_MB: ${MULTIPART_PART_MB:-32}
+      CODE_CHARSET: ${CODE_CHARSET:-ABCDEFGHIJKLMNOPQRSTUVWXYZ}
+      CODE_LEN: ${CODE_LEN:-6}
+      HOST: 0.0.0.0
+      PORT: "7012"
+    ports:
+      - "127.0.0.1:${BACKEND_PORT:-7012}:7012"
+
+volumes:
+  minio-data:
